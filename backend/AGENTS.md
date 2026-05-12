@@ -25,6 +25,11 @@ Current auth endpoints:
 - `POST /api/auth/logout`
 - `GET /api/auth/me`
 
+Current board endpoints:
+
+- `GET /api/board`
+- `PUT /api/board`
+
 ## Intended Project Layout
 
 The backend layout should stay simple and predictable. Target structure:
@@ -58,6 +63,11 @@ When backend code exists, run from `pm` or backend root:
 - unit tests for service/repository logic
 - API integration tests for auth + board routes
 - schema/init tests for DB auto-create behavior
+
+Current schema path and DB path:
+
+- runtime schema: `backend/app/schema.sql` (derived from `docs/kanban_schema.sql`)
+- default DB: `backend/data/pm_mvp.sqlite3`
 
 Document exact commands in this file once test tooling is scaffolded.
 

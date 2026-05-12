@@ -1,16 +1,4 @@
-from pathlib import Path
-import sys
-
-from fastapi.testclient import TestClient
-
-sys.path.append(str(Path(__file__).resolve().parents[1]))
-
-from app.main import app
-
-
-def test_login_success_sets_session_cookie() -> None:
-    client = TestClient(app)
-
+def test_login_success_sets_session_cookie(client) -> None:
     response = client.post(
         "/api/auth/login",
         json={"username": "user", "password": "password"},
@@ -21,9 +9,7 @@ def test_login_success_sets_session_cookie() -> None:
     assert "pm_session=" in response.headers.get("set-cookie", "")
 
 
-def test_login_failure_returns_401() -> None:
-    client = TestClient(app)
-
+def test_login_failure_returns_401(client) -> None:
     response = client.post(
         "/api/auth/login",
         json={"username": "user", "password": "wrong"},
@@ -32,16 +18,13 @@ def test_login_failure_returns_401() -> None:
     assert response.status_code == 401
 
 
-def test_auth_me_requires_session() -> None:
-    client = TestClient(app)
-
+def test_auth_me_requires_session(client) -> None:
     response = client.get("/api/auth/me")
 
     assert response.status_code == 401
 
 
-def test_auth_me_after_login_returns_user() -> None:
-    client = TestClient(app)
+def test_auth_me_after_login_returns_user(client) -> None:
     client.post(
         "/api/auth/login",
         json={"username": "user", "password": "password"},
@@ -53,8 +36,7 @@ def test_auth_me_after_login_returns_user() -> None:
     assert response.json() == {"authenticated": True, "username": "user"}
 
 
-def test_logout_clears_session() -> None:
-    client = TestClient(app)
+def test_logout_clears_session(client) -> None:
     client.post(
         "/api/auth/login",
         json={"username": "user", "password": "password"},
