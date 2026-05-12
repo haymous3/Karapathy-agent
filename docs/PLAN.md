@@ -1,37 +1,226 @@
-# High level steps for project
+# PM MVP Execution Plan
 
-Part 1: Plan
+## Confirmed Decisions
 
-Enrich this document to plan out each of these parts in detail, with substeps listed out as a checklist to be checked off by the agent, and with tests and success critieria for each. Also create an AGENTS.md file inside the frontend directory that describes the existing code there. Ensure the user checks and approves the plan.
+- Persist Kanban in normalized SQLite tables.
+- Use backend-validated login with HTTP-only cookie sessions.
+- Use OpenRouter model `openai/gpt-oss-120b`.
+- Treat `pm/` as project root for all work.
 
-Part 2: Scaffolding
+## Stage-Gate Execution Protocol (User Controlled)
 
-Set up the Docker infrastructure, the backend in backend/ with FastAPI, and write the start and stop scripts in the scripts/ directory. This should serve example static HTML to confirm that a 'hello world' example works running locally and also make an API call.
+- Work is executed one part at a time (Part 1 -> Part 10).
+- At the end of each part, stop and provide a delivery report before any next-step implementation.
+- Do not proceed to the next part unless the user explicitly says to continue.
 
-Part 3: Add in Frontend
+### Delivery Report Required After Each Part
 
-Now update so that the frontend is statically built and served, so that the app has the demo Kanban board displayed at /. Comprehensive unit and integration tests.
+- Scope completed and checklist status.
+- Files created/updated.
+- Tests run and results (unit/integration/e2e as relevant).
+- Review notes (risks, regressions checked, open issues).
+- Documentation updates.
+- Recommendation for the next part.
 
-Part 4: Add in a fake user sign in experience
+## Part 1 - Planning and Working Docs
 
-Now update so that on first hitting /, you need to log in with dummy credentials ("user", "password") in order to see the Kanban, and you can log out. Comprehensive tests.
+### Checklist
 
-Part 5: Database modeling
+- [x] Expand this file with detailed substeps for Parts 2-10.
+- [x] Add tests and success criteria for every part.
+- [x] Create or refresh `pm/frontend/AGENTS.md` with frontend architecture, key modules, and test commands.
+- [x] Create or refresh `pm/backend/AGENTS.md` with backend architecture, API boundaries, data layer, and test commands.
+- [x] Create or refresh `pm/scripts/AGENTS.md` with script ownership and usage.
 
-Now propose a database schema for the Kanban, saving it as JSON. Document the database approach in docs/ and get user sign off.
+### Tests
 
-Part 6: Backend
+- [x] Documentation review for internal consistency and sequencing.
 
-Now add API routes to allow the backend to read and change the Kanban for a given user; test this thoroughly with backend unit tests. The database should be created if it doesn't exist.
+### Success Criteria
 
-Part 7: Frontend + Backend
+- Plan is detailed, actionable, and approved by user.
+- AGENTS docs for frontend/backend/scripts are clear and current.
 
-Now have the frontend actually use the backend API, so that the app is a proper persistent Kanban board. Test very throughly.
+Part 1 implementation status: completed by agent, pending user approval.
 
-Part 8: AI connectivity
+## Part 2 - Scaffolding (Docker + FastAPI + Scripts)
 
-Now allow the backend to make an AI call via OpenRouter. Test connectivity with a simple "2+2" test and ensure the AI call is working.
+### Checklist
 
-Part 9: Now extend the backend call so that it always calls the AI with the JSON of the Kanban board, plus the user's question (and conversation history). The AI should respond with Structured Outputs that includes the response to the user and optionaly an update to the Kanban. Test thoroughly.
+- [x] Scaffold FastAPI backend in `pm/backend`.
+- [x] Add Python dependency management using `uv`.
+- [x] Add `pm/Dockerfile` to run backend in container.
+- [x] Add start/stop scripts for Windows/macOS/Linux in `pm/scripts`.
+- [x] Serve example static HTML at `/` and API hello endpoint.
 
-Part 10: Now add a beautiful sidebar widget to the UI supporting full AI chat, and allowing the LLM (as it determines) to update the Kanban based on its Structured Outputs. If the AI updates the Kanban, then the UI should refresh automatically.
+### Tests
+
+- [x] Container boots successfully.
+- [x] `GET /health` returns 200.
+- [x] `GET /api/hello` returns expected JSON.
+
+### Success Criteria
+
+- One documented workflow starts and stops the app locally.
+- Backend static + API routes are both working.
+
+Part 2 implementation status: completed by agent, pending user approval.
+
+## Part 3 - Frontend Static Build Served at `/`
+
+### Checklist
+
+- [x] Configure `pm/frontend/next.config.ts` for static export.
+- [x] Build frontend static output in Docker flow.
+- [x] Serve static frontend from FastAPI at `/`.
+- [x] Preserve backend API namespace (`/api/*`).
+
+### Tests
+
+- [x] Frontend unit tests pass.
+- [x] Frontend e2e smoke passes against served app.
+- [x] Backend API routes remain reachable.
+
+### Success Criteria
+
+- Existing Kanban UI loads from FastAPI-hosted static site at `/`.
+
+Part 3 implementation status: completed by agent, pending user approval.
+
+## Part 4 - Dummy Sign In/Out (Cookie Session)
+
+### Checklist
+
+- [x] Add auth endpoints (`/api/auth/login`, `/api/auth/logout`, `/api/auth/me`).
+- [x] Validate hardcoded credentials (`user`, `password`) on backend.
+- [x] Set and clear HTTP-only session cookie.
+- [x] Add frontend login gate and logout flow.
+
+### Tests
+
+- [x] Backend auth success/failure tests.
+- [x] Protected-route unauthorized tests.
+- [x] Frontend login/logout tests and e2e flow.
+
+### Success Criteria
+
+- Unauthenticated users cannot access protected board flows.
+- Authenticated users can log in, use board, and log out.
+
+Part 4 implementation status: completed by agent, pending user approval.
+
+## Part 5 - Database Modeling and Documentation
+
+### Checklist
+
+- [ ] Write schema proposal doc in `pm/docs`.
+- [ ] Define normalized tables (`users`, `boards`, `columns`, `cards`, ordering metadata, optional chat history).
+- [ ] Define indexes, constraints, and create-if-missing approach.
+- [ ] Define mapping between frontend board JSON shape and relational schema.
+- [ ] Get user sign-off before implementing DB CRUD layer.
+
+### Tests
+
+- [ ] Validate schema DDL by creating empty SQLite DB.
+- [ ] Validate round-trip mapping spec with example payload.
+
+### Success Criteria
+
+- Approved schema doc supports implementation without redesign.
+
+## Part 6 - Backend Kanban CRUD + DB Auto-Creation
+
+### Checklist
+
+- [ ] Implement startup DB initialization.
+- [ ] Add authenticated Kanban read/write endpoints.
+- [ ] Implement repository/service mapping relational data to board shape.
+- [ ] Seed default board for first-time user.
+
+### Tests
+
+- [ ] Backend unit tests for repository/service logic.
+- [ ] API tests for CRUD and per-user isolation.
+
+### Success Criteria
+
+- Board data persists across restart.
+- User data is isolated correctly.
+
+## Part 7 - Frontend + Backend Integration
+
+### Checklist
+
+- [ ] Replace in-memory-only board lifecycle with API-backed load/save.
+- [ ] Add frontend API client helpers.
+- [ ] Add loading/error states for fetch/mutation.
+
+### Tests
+
+- [ ] Frontend unit/integration tests with mocked API responses.
+- [ ] E2E persistence test across refresh.
+
+### Success Criteria
+
+- Board changes persist and reload reliably from backend.
+
+## Part 8 - OpenRouter Connectivity
+
+### Checklist
+
+- [ ] Add backend OpenRouter client using `OPENROUTER_API_KEY`.
+- [ ] Set model to `openai/gpt-oss-120b`.
+- [ ] Add simple AI connectivity path (`2+2` probe).
+
+### Tests
+
+- [ ] Integration test with mocked provider response.
+- [ ] Optional guarded live smoke test.
+
+### Success Criteria
+
+- Backend can call OpenRouter successfully.
+
+## Part 9 - Structured AI Outputs with Optional Kanban Update
+
+### Checklist
+
+- [ ] Send board JSON + conversation history + user prompt to AI route.
+- [ ] Define strict response schema (`assistantMessage`, optional board update payload).
+- [ ] Validate response server-side before applying updates.
+- [ ] Apply accepted updates transactionally and return updated board.
+
+### Tests
+
+- [ ] Schema validation tests for valid/invalid AI payloads.
+- [ ] Integration tests for message-only and message+board-update cases.
+
+### Success Criteria
+
+- AI responses are parseable, safe, and deterministic in API contract.
+
+## Part 10 - AI Sidebar UI and Auto-Refresh
+
+### Checklist
+
+- [ ] Build sidebar chat UI in frontend.
+- [ ] Submit chat messages to backend AI endpoint.
+- [ ] Apply board updates returned by AI and refresh board state automatically.
+- [ ] Add clear loading/error states.
+
+### Tests
+
+- [ ] Frontend tests for chat rendering/submission.
+- [ ] E2E flow where AI response updates the board.
+
+### Success Criteria
+
+- User can chat with AI and see board updates reflected in UI automatically.
+
+## Cross-Cutting Quality Gates
+
+- [ ] Keep implementation simple; avoid over-engineering.
+- [ ] Follow coding standards in `pm/AGENTS.md`.
+- [ ] Run relevant lint/unit/integration/e2e tests before closing each part.
+- [ ] Keep docs in `pm/docs` and all AGENTS files updated when behavior changes.
+- [ ] Aim for about 80% test coverage only when sensible; prioritize valuable tests over coverage chasing. It is acceptable to be below 80% if additional tests would be low value.

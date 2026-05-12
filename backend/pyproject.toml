@@ -1,0 +1,17 @@
+[project]
+name = "pm-backend"
+version = "0.1.0"
+description = "FastAPI backend for the PM MVP"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+  "fastapi",
+  "itsdangerous",
+  "uvicorn[standard]",
+]
+
+[dependency-groups]
+dev = [
+  "httpx",
+  "pytest",
+]
