@@ -7,6 +7,19 @@
 - Use OpenRouter model `openai/gpt-oss-120b`.
 - Treat `pm/` as project root for all work.
 
+## Implemented Design Decisions (Parts 2-7)
+
+- Docker uses multi-stage build: static Next export is built first and copied into backend static assets.
+- FastAPI serves static frontend at `/` and preserves API namespace under `/api/*`.
+- Auth is session-cookie based (`pm_session`) with backend-validated `user/password` login.
+- SQLite runtime DB path is `backend/data/pm_mvp.sqlite3` (create-if-missing startup).
+- Runtime backend schema source is `backend/app/schema.sql` (kept aligned with `docs/kanban_schema.sql`).
+- Backend board API contract is:
+  - `GET /api/board` returns authenticated user board
+  - `PUT /api/board` replaces board after payload validation
+- Frontend Kanban now loads from backend and saves changes to backend (with loading/saving/error states).
+- Start scripts support `PM_MVP_PORT` override when default port is busy.
+
 ## Stage-Gate Execution Protocol (User Controlled)
 
 - Work is executed one part at a time (Part 1 -> Part 10).
@@ -41,7 +54,7 @@
 - Plan is detailed, actionable, and approved by user.
 - AGENTS docs for frontend/backend/scripts are clear and current.
 
-Part 1 implementation status: completed by agent, pending user approval.
+Part 1 implementation status: completed and approved.
 
 ## Part 2 - Scaffolding (Docker + FastAPI + Scripts)
 
@@ -64,7 +77,7 @@ Part 1 implementation status: completed by agent, pending user approval.
 - One documented workflow starts and stops the app locally.
 - Backend static + API routes are both working.
 
-Part 2 implementation status: completed by agent, pending user approval.
+Part 2 implementation status: completed and approved.
 
 ## Part 3 - Frontend Static Build Served at `/`
 
@@ -85,7 +98,7 @@ Part 2 implementation status: completed by agent, pending user approval.
 
 - Existing Kanban UI loads from FastAPI-hosted static site at `/`.
 
-Part 3 implementation status: completed by agent, pending user approval.
+Part 3 implementation status: completed and approved.
 
 ## Part 4 - Dummy Sign In/Out (Cookie Session)
 
@@ -107,7 +120,7 @@ Part 3 implementation status: completed by agent, pending user approval.
 - Unauthenticated users cannot access protected board flows.
 - Authenticated users can log in, use board, and log out.
 
-Part 4 implementation status: completed by agent, pending user approval.
+Part 4 implementation status: completed and approved.
 
 ## Part 5 - Database Modeling and Documentation
 
@@ -128,7 +141,7 @@ Part 4 implementation status: completed by agent, pending user approval.
 
 - Approved schema doc supports implementation without redesign.
 
-Part 5 implementation status: completed by agent, pending user sign-off.
+Part 5 implementation status: completed and approved.
 
 ## Part 6 - Backend Kanban CRUD + DB Auto-Creation
 
@@ -149,7 +162,7 @@ Part 5 implementation status: completed by agent, pending user sign-off.
 - Board data persists across restart.
 - User data is isolated correctly.
 
-Part 6 implementation status: completed by agent, pending user approval.
+Part 6 implementation status: completed and approved.
 
 ## Part 7 - Frontend + Backend Integration
 
