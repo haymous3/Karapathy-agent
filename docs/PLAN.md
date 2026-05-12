@@ -155,18 +155,20 @@ Part 6 implementation status: completed by agent, pending user approval.
 
 ### Checklist
 
-- [ ] Replace in-memory-only board lifecycle with API-backed load/save.
-- [ ] Add frontend API client helpers.
-- [ ] Add loading/error states for fetch/mutation.
+- [x] Replace in-memory-only board lifecycle with API-backed load/save.
+- [x] Add frontend API client helpers.
+- [x] Add loading/error states for fetch/mutation.
 
 ### Tests
 
-- [ ] Frontend unit/integration tests with mocked API responses.
-- [ ] E2E persistence test across refresh.
+- [x] Frontend unit/integration tests with mocked API responses.
+- [x] E2E persistence test across refresh.
 
 ### Success Criteria
 
 - Board changes persist and reload reliably from backend.
+
+Part 7 implementation status: completed by agent, pending user approval.
 
 ## Part 8 - OpenRouter Connectivity
 

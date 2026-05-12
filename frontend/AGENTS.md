@@ -22,6 +22,8 @@
   - `src/components/AuthGate.tsx`
 - Board state and logic:
   - `src/components/KanbanBoard.tsx` owns board state and handlers
+  - board now loads/saves through backend API with minimal loading/error/saving UI
+  - `src/lib/api.ts` contains board API helpers (`fetchBoard`, `saveBoard`)
   - `src/lib/kanban.ts` defines data model (`BoardData`, `Column`, `Card`) and move utilities
 - Column/Card UI:
   - `src/components/KanbanColumn.tsx`
