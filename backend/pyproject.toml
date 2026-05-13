@@ -7,11 +7,14 @@ requires-python = ">=3.12"
 dependencies = [
   "fastapi",
   "itsdangerous",
+  "openai>=1.50",
+  "python-dotenv>=1.0",
   "uvicorn[standard]",
 ]
 
 [dependency-groups]
 dev = [
+  "coverage>=7.14.0",
   "httpx",
   "pytest",
 ]

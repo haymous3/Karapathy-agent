@@ -30,6 +30,15 @@ Current board endpoints:
 - `GET /api/board`
 - `PUT /api/board`
 
+Current AI endpoints:
+
+- `POST /api/ai/ping` (auth required; OpenRouter "2+2" connectivity probe)
+- `POST /api/ai/chat` (auth required; structured chat with optional board update)
+  - Request: `{ message: string, history: [{role: "user"|"assistant", content: string}, ...] }`
+  - Response: `{ assistantMessage: string, board: <current board>, boardUpdated: boolean }`
+  - Strict structured outputs via `response_format = { type: "json_schema", ... }` and re-validated server-side with Pydantic.
+  - Soft-fail policy on invalid AI-proposed updates: returns 200 with `boardUpdated: false` and an explanation appended to `assistantMessage`.
+
 ## Intended Project Layout
 
 The backend layout should stay simple and predictable. Target structure:
@@ -51,6 +60,16 @@ Adjust names if needed, but keep a clear separation between API, data, and servi
 - Keep data mapping deterministic (DB <-> API model).
 - Validate AI structured outputs before mutating board data.
 - Use transactions for multi-table board updates.
+
+## AI Integration Notes
+
+- AI client lives in `backend/app/ai.py`; uses the official `openai` Python SDK pointed at OpenRouter.
+- Config is env-driven with defaults: `OPENROUTER_API_KEY` (required), `OPENROUTER_BASE_URL` (default `https://openrouter.ai/api/v1`), `OPENROUTER_MODEL` (default `openai/gpt-oss-120b`), `OPENROUTER_TIMEOUT_SECONDS` (default 30).
+- `pm/.env` is loaded at backend import time via `python-dotenv`; Docker also passes the same file via `--env-file`.
+- Provider failures bubble up as `AIServiceError` and are returned to the client as HTTP 502.
+- `create_app` accepts an `ai_service_factory` parameter so tests can inject a stub `OpenRouterService` without monkeypatching the SDK.
+- Live smoke tests are gated by `PM_RUN_LIVE_AI_TESTS=1` and skipped by default to avoid burning API credits in CI/Docker.
+- Structured chat (`OpenRouterService.chat`) sends a system prompt plus the current board JSON as a system message, then the prior conversation `history`, then the new user message. The response is forced into the `pm_chat_response` JSON schema and re-validated with the `ChatResponseModel` Pydantic model before being returned as `ChatResult`.
 
 ## Test Expectations
 

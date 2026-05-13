@@ -21,15 +21,19 @@
 - Auth and session-aware UI:
   - `src/components/AuthGate.tsx`
 - Board state and logic:
-  - `src/components/KanbanBoard.tsx` owns board state and handlers
-  - board now loads/saves through backend API with minimal loading/error/saving UI
-  - `src/lib/api.ts` contains board API helpers (`fetchBoard`, `saveBoard`)
+  - `src/components/KanbanBoard.tsx` owns board state and handlers, mounts the AI sidebar below the grid
+  - board loads/saves through backend API with minimal loading/error/saving UI
+  - `src/lib/api.ts` contains API helpers (`fetchBoard`, `saveBoard`, `sendChatMessage`)
   - `src/lib/kanban.ts` defines data model (`BoardData`, `Column`, `Card`) and move utilities
 - Column/Card UI:
   - `src/components/KanbanColumn.tsx`
   - `src/components/KanbanCard.tsx`
   - `src/components/NewCardForm.tsx`
   - `src/components/KanbanCardPreview.tsx`
+- AI chat sidebar:
+  - `src/components/AISidebar.tsx` renders the chat list, composer, and applies AI-proposed board updates via the `onBoardReplaced` callback (no extra `GET /api/board` needed)
+  - Chat history is stateless: last 16 turns are sent with each request
+  - Rendered below the kanban grid (full-width, glass card aesthetic). Side-by-side fixed/sticky layouts were tried but broke dnd-kit drag-and-drop pointer detection.
 
 ## Test Commands
 

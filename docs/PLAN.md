@@ -181,60 +181,97 @@ Part 6 implementation status: completed and approved.
 
 - Board changes persist and reload reliably from backend.
 
-Part 7 implementation status: completed by agent, pending user approval.
+Part 7 implementation status: completed and approved.
 
 ## Part 8 - OpenRouter Connectivity
 
 ### Checklist
 
-- [ ] Add backend OpenRouter client using `OPENROUTER_API_KEY`.
-- [ ] Set model to `openai/gpt-oss-120b`.
-- [ ] Add simple AI connectivity path (`2+2` probe).
+- [x] Add backend OpenRouter client using `OPENROUTER_API_KEY`.
+- [x] Set model to `openai/gpt-oss-120b`.
+- [x] Add simple AI connectivity path (`2+2` probe).
 
 ### Tests
 
-- [ ] Integration test with mocked provider response.
-- [ ] Optional guarded live smoke test.
+- [x] Integration test with mocked provider response.
+- [x] Optional guarded live smoke test.
 
 ### Success Criteria
 
 - Backend can call OpenRouter successfully.
 
+### Implemented Design Decisions
+
+- AI integration lives in `backend/app/ai.py` and uses the official `openai` Python SDK pointed at OpenRouter (`base_url=https://openrouter.ai/api/v1`).
+- Configuration is env-driven with sensible defaults: `OPENROUTER_API_KEY` (required), `OPENROUTER_BASE_URL`, `OPENROUTER_MODEL` (default `openai/gpt-oss-120b`), `OPENROUTER_TIMEOUT_SECONDS` (default 30s).
+- `pm/.env` is loaded at backend import time via `python-dotenv` for local `uv run` use; Docker continues to pass env vars via `--env-file .env`.
+- Authenticated endpoint `POST /api/ai/ping` calls the model with a fixed "What is 2+2?" prompt and returns `{ "ok": true, "model": "...", "reply": "4" }`.
+- Provider errors are surfaced as HTTP 502 with the upstream message.
+- Service has a constructor seam (`chat_client` parameter) and the app exposes `ai_service_factory` to `create_app` so tests inject fakes without monkeypatching the SDK.
+- Live smoke tests are gated by `PM_RUN_LIVE_AI_TESTS=1` and skipped by default.
+
+Part 8 implementation status: completed and approved.
+
 ## Part 9 - Structured AI Outputs with Optional Kanban Update
 
 ### Checklist
 
-- [ ] Send board JSON + conversation history + user prompt to AI route.
-- [ ] Define strict response schema (`assistantMessage`, optional board update payload).
-- [ ] Validate response server-side before applying updates.
-- [ ] Apply accepted updates transactionally and return updated board.
+- [x] Send board JSON + conversation history + user prompt to AI route.
+- [x] Define strict response schema (`assistantMessage`, optional board update payload).
+- [x] Validate response server-side before applying updates.
+- [x] Apply accepted updates transactionally and return updated board.
 
 ### Tests
 
-- [ ] Schema validation tests for valid/invalid AI payloads.
-- [ ] Integration tests for message-only and message+board-update cases.
+- [x] Schema validation tests for valid/invalid AI payloads.
+- [x] Integration tests for message-only and message+board-update cases.
 
 ### Success Criteria
 
 - AI responses are parseable, safe, and deterministic in API contract.
 
+### Implemented Design Decisions
+
+- New endpoint: `POST /api/ai/chat` (auth required). Request: `{ message, history: [{role, content}] }`. Response: `{ assistantMessage, board, boardUpdated }`.
+- Conversation history is stateless: the frontend sends recent messages each request; the backend stores nothing.
+- Backend reads the current board from SQLite and sends it as a `system` message alongside the system prompt; the model is never trusted to remember board state.
+- Structured outputs use OpenAI's `response_format = { "type": "json_schema", ... }` strict mode against `pm_chat_response` schema. The Pydantic model `ChatResponseModel` re-validates the parsed JSON server-side (defense in depth).
+- System prompt lives as `CHAT_SYSTEM_PROMPT` constant in `backend/app/ai.py`.
+- Accepted board updates are normalized via the existing `BoardPayload` + `normalize_and_validate_board` pipeline and saved through `BoardRepository.save_board` (single-connection commit -> effectively transactional).
+- Soft-fail policy: if the AI proposes a board update that fails validation, the endpoint returns 200 with `boardUpdated: false`, the unchanged board, and an appended note in `assistantMessage`. Hard provider/parse failures still return 502.
+- Model and temperature remain unchanged (default `openai/gpt-oss-120b`, SDK default temperature).
+
+Part 9 implementation status: completed and approved.
+
 ## Part 10 - AI Sidebar UI and Auto-Refresh
 
 ### Checklist
 
-- [ ] Build sidebar chat UI in frontend.
-- [ ] Submit chat messages to backend AI endpoint.
-- [ ] Apply board updates returned by AI and refresh board state automatically.
-- [ ] Add clear loading/error states.
+- [x] Build sidebar chat UI in frontend.
+- [x] Submit chat messages to backend AI endpoint.
+- [x] Apply board updates returned by AI and refresh board state automatically.
+- [x] Add clear loading/error states.
 
 ### Tests
 
-- [ ] Frontend tests for chat rendering/submission.
-- [ ] E2E flow where AI response updates the board.
+- [x] Frontend tests for chat rendering/submission.
+- [x] E2E flow where AI response updates the board.
 
 ### Success Criteria
 
 - User can chat with AI and see board updates reflected in UI automatically.
+
+### Implemented Design Decisions
+
+- New component `frontend/src/components/AISidebar.tsx` is mounted from `KanbanBoard` and renders as a glass card section below the kanban grid (full-width, max-w-[1500px] container). The same component handles all screen sizes; no separate mobile vs desktop trees.
+- Side-by-side layouts (`flex flex-row`, `fixed`, `sticky`) were attempted but broke dnd-kit's drag-and-drop pointer detection. The below-board layout is intentional and preserves the existing board interactions verbatim.
+- The sidebar holds its own chat state (no global store, no context): user/assistant bubbles, suggested prompt chips when empty, typing indicator while waiting, role="alert" error region, and a "Board updated" pill on the assistant message that triggered a board change.
+- Stateless history: the last 16 turns are passed to `POST /api/ai/chat` on every request. Nothing is persisted between page loads.
+- New API helper `sendChatMessage(message, history)` in `frontend/src/lib/api.ts` parses `{ detail }` from non-200 responses and surfaces it as the error message.
+- When the AI returns `boardUpdated: true`, the sidebar calls `onBoardReplaced(board)` which directly replaces `KanbanBoard`'s state. No extra `GET /api/board` is issued.
+- Composer: Enter to send, Shift+Enter for newline, send button disabled while sending or when draft is empty.
+
+Part 10 implementation status: completed by agent, pending user approval.
 
 ## Cross-Cutting Quality Gates
 

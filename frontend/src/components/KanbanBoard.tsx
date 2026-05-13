@@ -11,6 +11,7 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
+import { AISidebar } from "@/components/AISidebar";
 import { KanbanColumn } from "@/components/KanbanColumn";
 import { KanbanCardPreview } from "@/components/KanbanCardPreview";
 import { createId, moveCard, type BoardData, type Card } from "@/lib/kanban";
@@ -263,6 +264,8 @@ export const KanbanBoard = () => {
           </DragOverlay>
         </DndContext>
       </main>
+
+      <AISidebar onBoardReplaced={(nextBoard) => setBoard(nextBoard)} />
     </div>
   );
 };

@@ -1,13 +1,16 @@
 import os
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from starlette.middleware.sessions import SessionMiddleware
 
+from app.ai import AIServiceError, ChatResult, OpenRouterService
 from app.db import BoardRepository
 from app.seed_data import DEFAULT_BOARD_DATA
 
@@ -19,6 +22,9 @@ FRONTEND_STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
 FRONTEND_INDEX_FILE = FRONTEND_STATIC_DIR / "index.html"
 DEFAULT_DB_PATH = Path(__file__).resolve().parent.parent / "data" / "pm_mvp.sqlite3"
 SCHEMA_PATH = Path(__file__).resolve().parent / "schema.sql"
+PROJECT_ROOT_ENV_FILE = Path(__file__).resolve().parents[2] / ".env"
+
+load_dotenv(PROJECT_ROOT_ENV_FILE, override=False)
 
 FALLBACK_HTML = """<!doctype html>
 <html lang="en">
@@ -62,6 +68,16 @@ class ColumnPayload(BaseModel):
 class BoardPayload(BaseModel):
     columns: list[ColumnPayload]
     cards: dict[str, CardPayload]
+
+
+class ChatHistoryMessage(BaseModel):
+    role: str = Field(pattern="^(user|assistant)$")
+    content: str
+
+
+class ChatRequest(BaseModel):
+    message: str = Field(min_length=1)
+    history: list[ChatHistoryMessage] = Field(default_factory=list)
 
 
 def normalize_and_validate_board(payload: BoardPayload) -> dict[str, Any]:
@@ -122,7 +138,10 @@ def require_authenticated_username(request: Request) -> str:
     return username
 
 
-def create_app(db_path: Path | str | None = None) -> FastAPI:
+def create_app(
+    db_path: Path | str | None = None,
+    ai_service_factory: Callable[[], OpenRouterService] | None = None,
+) -> FastAPI:
     app = FastAPI(title="PM MVP Backend", version="0.1.0")
     resolved_db_path = Path(db_path) if db_path else Path(os.getenv("PM_DB_PATH", DEFAULT_DB_PATH))
     repository = BoardRepository(
@@ -131,6 +150,7 @@ def create_app(db_path: Path | str | None = None) -> FastAPI:
         default_board=DEFAULT_BOARD_DATA,
     )
     repository.initialize()
+    build_ai_service = ai_service_factory or OpenRouterService
 
     app.add_middleware(
         SessionMiddleware,
@@ -180,6 +200,53 @@ def create_app(db_path: Path | str | None = None) -> FastAPI:
         username = require_authenticated_username(request)
         normalized = normalize_and_validate_board(payload)
         return repository.save_board(username, normalized)
+
+    @app.post("/api/ai/ping")
+    def ai_ping(request: Request) -> dict[str, Any]:
+        require_authenticated_username(request)
+        try:
+            service = build_ai_service()
+            reply = service.ping()
+        except AIServiceError as exc:
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
+        return {"ok": True, "model": service.model, "reply": reply}
+
+    @app.post("/api/ai/chat")
+    def ai_chat(payload: ChatRequest, request: Request) -> dict[str, Any]:
+        username = require_authenticated_username(request)
+        current_board = repository.get_board(username)
+
+        try:
+            service = build_ai_service()
+            result: ChatResult = service.chat(
+                message=payload.message,
+                history=[m.model_dump() for m in payload.history],
+                board=current_board,
+            )
+        except AIServiceError as exc:
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+        assistant_message = result.assistant_message
+        board_updated = False
+        final_board = current_board
+
+        if result.board_update is not None:
+            try:
+                validated_payload = BoardPayload.model_validate(result.board_update)
+                normalized = normalize_and_validate_board(validated_payload)
+                final_board = repository.save_board(username, normalized)
+                board_updated = True
+            except (HTTPException, ValueError) as exc:
+                detail = getattr(exc, "detail", str(exc))
+                assistant_message = (
+                    f"{assistant_message} (I tried to update the board but the change was invalid: {detail})"
+                )
+
+        return {
+            "assistantMessage": assistant_message,
+            "board": final_board,
+            "boardUpdated": board_updated,
+        }
 
     if FRONTEND_INDEX_FILE.exists():
         app.mount("/", StaticFiles(directory=FRONTEND_STATIC_DIR, html=True), name="frontend")
